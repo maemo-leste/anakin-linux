@@ -32,6 +32,7 @@
 #include <linux/moduleparam.h>
 #include <linux/workqueue.h>
 #include <linux/uuid.h>
+#include <linux/nospec.h>
 
 #define IPMI_DRIVER_VERSION "39.2"
 
@@ -1375,10 +1376,12 @@ int ipmi_set_my_address(struct ipmi_user *user,
 	if (!user)
 		return -ENODEV;
 
-	if (channel >= IPMI_MAX_CHANNELS)
+	if (channel >= IPMI_MAX_CHANNELS) {
 		rv = -EINVAL;
-	else
+	} else {
+		channel = array_index_nospec(channel, IPMI_MAX_CHANNELS);
 		user->intf->addrinfo[channel].address = address;
+	}
 	release_ipmi_user(user, index);
 
 	return rv;
@@ -1395,10 +1398,12 @@ int ipmi_get_my_address(struct ipmi_user *user,
 	if (!user)
 		return -ENODEV;
 
-	if (channel >= IPMI_MAX_CHANNELS)
+	if (channel >= IPMI_MAX_CHANNELS) {
 		rv = -EINVAL;
-	else
+	} else {
+		channel = array_index_nospec(channel, IPMI_MAX_CHANNELS);
 		*address = user->intf->addrinfo[channel].address;
+	}
 	release_ipmi_user(user, index);
 
 	return rv;
@@ -1415,10 +1420,12 @@ int ipmi_set_my_LUN(struct ipmi_user *user,
 	if (!user)
 		return -ENODEV;
 
-	if (channel >= IPMI_MAX_CHANNELS)
+	if (channel >= IPMI_MAX_CHANNELS) {
 		rv = -EINVAL;
-	else
+	} else {
+		channel = array_index_nospec(channel, IPMI_MAX_CHANNELS);
 		user->intf->addrinfo[channel].lun = LUN & 0x3;
+	}
 	release_ipmi_user(user, index);
 
 	return rv;
@@ -1435,10 +1442,12 @@ int ipmi_get_my_LUN(struct ipmi_user *user,
 	if (!user)
 		return -ENODEV;
 
-	if (channel >= IPMI_MAX_CHANNELS)
+	if (channel >= IPMI_MAX_CHANNELS) {
 		rv = -EINVAL;
-	else
+	} else {
+		channel = array_index_nospec(channel, IPMI_MAX_CHANNELS);
 		*address = user->intf->addrinfo[channel].lun;
+	}
 	release_ipmi_user(user, index);
 
 	return rv;
@@ -2257,6 +2266,7 @@ static int check_addr(struct ipmi_smi  *intf,
 {
 	if (addr->channel >= IPMI_MAX_CHANNELS)
 		return -EINVAL;
+	addr->channel = array_index_nospec(addr->channel, IPMI_MAX_CHANNELS);
 	*lun = intf->addrinfo[addr->channel].lun;
 	*saddr = intf->addrinfo[addr->channel].address;
 	return 0;
