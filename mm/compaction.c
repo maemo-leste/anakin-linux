@@ -1963,7 +1963,6 @@ static enum compact_result compact_zone(struct compact_control *cc)
 	unsigned long end_pfn = zone_end_pfn(cc->zone);
 	unsigned long last_migrated_pfn;
 	const bool sync = cc->mode != MIGRATE_ASYNC;
-	unsigned long a, b, c;
 
 	cc->migratetype = gfpflags_to_migratetype(cc->gfp_mask);
 	ret = compaction_suitable(cc->zone, cc->order, cc->alloc_flags,
@@ -2008,10 +2007,6 @@ static enum compact_result compact_zone(struct compact_control *cc)
 		if (cc->migrate_pfn == start_pfn)
 			cc->whole_zone = true;
 	}
-
-	a = cc->migrate_pfn;
-	b = cc->free_pfn;
-	c = (cc->free_pfn - cc->migrate_pfn) / pageblock_nr_pages;
 
 	last_migrated_pfn = 0;
 
