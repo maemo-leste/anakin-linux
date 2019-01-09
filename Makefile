@@ -234,7 +234,7 @@ clean-targets := %clean mrproper cleandocs
 no-dot-config-targets := $(clean-targets) \
 			 cscope gtags TAGS tags help% %docs check% coccicheck \
 			 $(version_h) headers_% archheaders archscripts \
-			 %asm-generic kernelversion %src-pkg
+			 %asm-generic genheader kernelversion %src-pkg
 no-sync-config-targets := $(no-dot-config-targets) install %install \
 			   kernelrelease
 
@@ -1077,8 +1077,8 @@ ifneq ($(KBUILD_SRC),)
 	fi;
 endif
 
-prepare1: prepare3 outputmakefile asm-generic $(version_h) $(autoksyms_h) \
-						include/generated/utsrelease.h
+prepare1: prepare3 outputmakefile asm-generic genheader $(version_h) \
+				$(autoksyms_h) include/generated/utsrelease.h
 	$(cmd_crmodverdir)
 
 archprepare: archheaders archscripts prepare1 scripts
@@ -1098,6 +1098,10 @@ asm-generic: uapi-asm-generic
 	$(Q)$(MAKE) $(asm-generic)=arch/$(SRCARCH)/include/generated/asm
 uapi-asm-generic:
 	$(Q)$(MAKE) $(asm-generic)=arch/$(SRCARCH)/include/generated/uapi/asm
+
+PHONY += genheader
+genheader:
+	$(Q)$(MAKE) -f $(srctree)/scripts/Makefile.genheader obj=include/generated
 
 PHONY += prepare-objtool
 prepare-objtool: $(objtool_target)
