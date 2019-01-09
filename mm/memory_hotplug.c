@@ -676,6 +676,13 @@ static int online_pages_blocks(unsigned long start, unsigned long nr_pages)
 		order = min(MAX_ORDER - 1,
 			get_order(PFN_PHYS(end) - PFN_PHYS(start)));
 
+		/*
+		 * External callback providers can deny onlining pages. So check
+		 * for return value.
+		 * zero		: if all pages are onlined.
+		 * positive	: if only few pages are onlined.
+		 * negative	: if none of the pages are onlined.
+		 */
 		ret = (*online_page_callback)(pfn_to_page(start), order);
 		if (!ret)
 			onlined_pages += (1UL << order);
@@ -697,7 +704,7 @@ static int online_pages_range(unsigned long start_pfn, unsigned long nr_pages,
 
 	online_mem_sections(start_pfn, start_pfn + nr_pages);
 
-	*(unsigned long *)arg = onlined_pages;
+	*(unsigned long *)arg += onlined_pages;
 	return 0;
 }
 
