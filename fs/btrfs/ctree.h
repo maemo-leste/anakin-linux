@@ -1212,6 +1212,17 @@ enum {
 };
 
 /*
+ * Record swapped tree blocks of a file/subvolume tree for delayed subtree
+ * trace code. For detail check comment in fs/btrfs/qgroup.c.
+ */
+struct btrfs_qgroup_swapped_blocks {
+	spinlock_t lock;
+	struct rb_root blocks[BTRFS_MAX_LEVEL];
+	/* RM_EMPTY_ROOT() of above blocks[] */
+	bool swapped;
+};
+
+/*
  * in ram representation of the tree.  extent_root is used for all allocations
  * and for the extent tree extent_root root.
  */
@@ -1345,6 +1356,9 @@ struct btrfs_root {
 
 	/* Number of active swapfiles */
 	atomic_t nr_swapfiles;
+
+	/* Record pairs of swapped blocks for qgroup */
+	struct btrfs_qgroup_swapped_blocks swapped_blocks;
 
 #ifdef CONFIG_BTRFS_FS_RUN_SANITY_TESTS
 	u64 alloc_bytenr;
