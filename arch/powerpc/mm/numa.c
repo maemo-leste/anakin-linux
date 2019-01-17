@@ -1178,7 +1178,7 @@ static long vphn_get_associativity(unsigned long cpu,
 
 	switch (rc) {
 	case H_FUNCTION:
-		printk(KERN_INFO
+		printk_once(KERN_INFO
 			"VPHN is not supported. Disabling polling...\n");
 		stop_topology_update();
 		break;
@@ -1475,7 +1475,7 @@ static int dt_update_callback(struct notifier_block *nb,
 
 	switch (action) {
 	case OF_RECONFIG_UPDATE_PROPERTY:
-		if (!of_prop_cmp(update->dn->type, "cpu") &&
+		if (of_node_is_type(update->dn, "cpu") &&
 		    !of_prop_cmp(update->prop->name, "ibm,associativity")) {
 			u32 core_id;
 			of_property_read_u32(update->dn, "reg", &core_id);

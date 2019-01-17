@@ -267,7 +267,7 @@ static struct attribute *hwmon_genattr(struct device *dev,
 	struct device_attribute *dattr;
 	struct attribute *a;
 	umode_t mode;
-	char *name;
+	const char *name;
 	bool is_string = is_string_attr(type, attr);
 
 	/* The attribute is invisible if there is no template string */
@@ -289,7 +289,7 @@ static struct attribute *hwmon_genattr(struct device *dev,
 		return ERR_PTR(-ENOMEM);
 
 	if (type == hwmon_chip) {
-		name = (char *)template;
+		name = template;
 	} else {
 		scnprintf(hattr->name, sizeof(hattr->name), template,
 			  index + hwmon_attr_base(type));
@@ -649,8 +649,10 @@ __hwmon_device_register(struct device *dev, const char *name, void *drvdata,
 				if (info[i]->config[j] & HWMON_T_INPUT) {
 					err = hwmon_thermal_add_sensor(dev,
 								hwdev, j);
-					if (err)
-						goto free_device;
+					if (err) {
+						device_unregister(hdev);
+						goto ida_remove;
+					}
 				}
 			}
 		}
@@ -658,8 +660,6 @@ __hwmon_device_register(struct device *dev, const char *name, void *drvdata,
 
 	return hdev;
 
-free_device:
-	device_unregister(hdev);
 free_hwmon:
 	kfree(hwdev);
 ida_remove:

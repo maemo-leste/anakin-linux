@@ -23,7 +23,6 @@
 #include "exynos_drm_drv.h"
 #include "exynos_drm_fb.h"
 #include "exynos_drm_fbdev.h"
-#include "exynos_drm_iommu.h"
 
 #define MAX_CONNECTOR		4
 #define PREFERRED_BPP		32
@@ -192,7 +191,7 @@ int exynos_drm_fbdev_init(struct drm_device *dev)
 	struct drm_fb_helper *helper;
 	int ret;
 
-	if (!dev->mode_config.num_crtc || !dev->mode_config.num_connector)
+	if (!dev->mode_config.num_crtc)
 		return 0;
 
 	fbdev = kzalloc(sizeof(*fbdev), GFP_KERNEL);

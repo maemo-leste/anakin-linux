@@ -350,6 +350,9 @@ static int __inet6_bind(struct sock *sk, struct sockaddr *uaddr, int addr_len,
 					err = -EINVAL;
 					goto out_unlock;
 				}
+			}
+
+			if (sk->sk_bound_dev_if) {
 				dev = dev_get_by_index_rcu(net, sk->sk_bound_dev_if);
 				if (!dev) {
 					err = -ENODEV;
@@ -1001,6 +1004,9 @@ static int __init inet6_init(void)
 	err = ip6_flowlabel_init();
 	if (err)
 		goto ip6_flowlabel_fail;
+	err = ipv6_anycast_init();
+	if (err)
+		goto ipv6_anycast_fail;
 	err = addrconf_init();
 	if (err)
 		goto addrconf_fail;
@@ -1091,6 +1097,8 @@ ipv6_frag_fail:
 ipv6_exthdrs_fail:
 	addrconf_cleanup();
 addrconf_fail:
+	ipv6_anycast_cleanup();
+ipv6_anycast_fail:
 	ip6_flowlabel_cleanup();
 ip6_flowlabel_fail:
 	ndisc_late_cleanup();

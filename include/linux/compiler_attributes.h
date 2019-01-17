@@ -4,22 +4,26 @@
 
 /*
  * The attributes in this file are unconditionally defined and they directly
- * map to compiler attribute(s) -- except those that are optional.
+ * map to compiler attribute(s), unless one of the compilers does not support
+ * the attribute. In that case, __has_attribute is used to check for support
+ * and the reason is stated in its comment ("Optional: ...").
  *
  * Any other "attributes" (i.e. those that depend on a configuration option,
  * on a compiler, on an architecture, on plugins, on other attributes...)
  * should be defined elsewhere (e.g. compiler_types.h or compiler-*.h).
+ * The intention is to keep this file as simple as possible, as well as
+ * compiler- and version-agnostic (e.g. avoiding GCC_VERSION checks).
  *
  * This file is meant to be sorted (by actual attribute name,
  * not by #define identifier). Use the __attribute__((__name__)) syntax
  * (i.e. with underscores) to avoid future collisions with other macros.
- * If an attribute is optional, state the reason in the comment.
+ * Provide links to the documentation of each supported compiler, if it exists.
  */
 
 /*
- * To check for optional attributes, we use __has_attribute, which is supported
- * on gcc >= 5, clang >= 2.9 and icc >= 17. In the meantime, to support
- * 4.6 <= gcc < 5, we implement __has_attribute by hand.
+ * __has_attribute is supported on gcc >= 5, clang >= 2.9 and icc >= 17.
+ * In the meantime, to support 4.6 <= gcc < 5, we implement __has_attribute
+ * by hand.
  *
  * sparse does not support __has_attribute (yet) and defines __GNUC_MINOR__
  * depending on the compiler used to build it; however, these attributes have
@@ -33,7 +37,6 @@
 # define __GCC4_has_attribute___designated_init__     0
 # define __GCC4_has_attribute___externally_visible__  1
 # define __GCC4_has_attribute___noclone__             1
-# define __GCC4_has_attribute___optimize__            1
 # define __GCC4_has_attribute___nonstring__           0
 # define __GCC4_has_attribute___no_sanitize_address__ (__GNUC_MINOR__ >= 8)
 #endif
@@ -159,17 +162,11 @@
 
 /*
  * Optional: not supported by clang
- * Note: icc does not recognize gcc's no-tracer
  *
  *  gcc: https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html#index-noclone-function-attribute
- *  gcc: https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html#index-optimize-function-attribute
  */
 #if __has_attribute(__noclone__)
-# if __has_attribute(__optimize__)
-#  define __noclone                     __attribute__((__noclone__, __optimize__("no-tracer")))
-# else
-#  define __noclone                     __attribute__((__noclone__))
-# endif
+# define __noclone                      __attribute__((__noclone__))
 #else
 # define __noclone
 #endif
@@ -201,19 +198,6 @@
  * clang: https://clang.llvm.org/docs/AttributeReference.html#id1
  */
 #define __noreturn                      __attribute__((__noreturn__))
-
-/*
- * Optional: only supported since gcc >= 4.8
- * Optional: not supported by icc
- *
- *   gcc: https://gcc.gnu.org/onlinedocs/gcc/Common-Function-Attributes.html#index-no_005fsanitize_005faddress-function-attribute
- * clang: https://clang.llvm.org/docs/AttributeReference.html#no-sanitize-address-no-address-safety-analysis
- */
-#if __has_attribute(__no_sanitize_address__)
-# define __no_sanitize_address          __attribute__((__no_sanitize_address__))
-#else
-# define __no_sanitize_address
-#endif
 
 /*
  *   gcc: https://gcc.gnu.org/onlinedocs/gcc/Common-Type-Attributes.html#index-packed-type-attribute

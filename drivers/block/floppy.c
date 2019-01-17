@@ -2231,7 +2231,6 @@ static void request_done(int uptodate)
 {
 	struct request *req = current_req;
 	struct request_queue *q;
-	unsigned long flags;
 	int block;
 	char msg[sizeof("request done ") + sizeof(int) * 3];
 
@@ -2254,10 +2253,7 @@ static void request_done(int uptodate)
 		if (block > _floppy->sect)
 			DRS->maxtrack = 1;
 
-		/* unlock chained buffers */
-		spin_lock_irqsave(q->queue_lock, flags);
 		floppy_end_request(req, 0);
-		spin_unlock_irqrestore(q->queue_lock, flags);
 	} else {
 		if (rq_data_dir(req) == WRITE) {
 			/* record write error information */
@@ -2269,9 +2265,7 @@ static void request_done(int uptodate)
 			DRWE->last_error_sector = blk_rq_pos(req);
 			DRWE->last_error_generation = DRS->generation;
 		}
-		spin_lock_irqsave(q->queue_lock, flags);
 		floppy_end_request(req, BLK_STS_IOERR);
-		spin_unlock_irqrestore(q->queue_lock, flags);
 	}
 }
 
@@ -4148,10 +4142,11 @@ static int __floppy_read_block_0(struct block_device *bdev, int drive)
 	bio.bi_end_io = floppy_rb0_cb;
 	bio_set_op_attrs(&bio, REQ_OP_READ, 0);
 
+	init_completion(&cbdata.complete);
+
 	submit_bio(&bio);
 	process_fd_request();
 
-	init_completion(&cbdata.complete);
 	wait_for_completion(&cbdata.complete);
 
 	__free_page(page);

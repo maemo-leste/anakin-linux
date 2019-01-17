@@ -160,8 +160,13 @@ static int imx6q_set_target(struct cpufreq_policy *policy, unsigned int index)
 	/* Ensure the arm clock divider is what we expect */
 	ret = clk_set_rate(clks[ARM].clk, new_freq * 1000);
 	if (ret) {
+		int ret1;
+
 		dev_err(cpu_dev, "failed to set clock rate: %d\n", ret);
-		regulator_set_voltage_tol(arm_reg, volt_old, 0);
+		ret1 = regulator_set_voltage_tol(arm_reg, volt_old, 0);
+		if (ret1)
+			dev_warn(cpu_dev,
+				 "failed to restore vddarm voltage: %d\n", ret1);
 		return ret;
 	}
 
@@ -172,22 +177,16 @@ static int imx6q_set_target(struct cpufreq_policy *policy, unsigned int index)
 	/* scaling down?  scale voltage after frequency */
 	if (new_freq < old_freq) {
 		ret = regulator_set_voltage_tol(arm_reg, volt, 0);
-		if (ret) {
+		if (ret)
 			dev_warn(cpu_dev,
 				 "failed to scale vddarm down: %d\n", ret);
-			ret = 0;
-		}
 		ret = regulator_set_voltage_tol(soc_reg, imx6_soc_volt[index], 0);
-		if (ret) {
+		if (ret)
 			dev_warn(cpu_dev, "failed to scale vddsoc down: %d\n", ret);
-			ret = 0;
-		}
 		if (!IS_ERR(pu_reg)) {
 			ret = regulator_set_voltage_tol(pu_reg, imx6_soc_volt[index], 0);
-			if (ret) {
+			if (ret)
 				dev_warn(cpu_dev, "failed to scale vddpu down: %d\n", ret);
-				ret = 0;
-			}
 		}
 	}
 
@@ -406,9 +405,10 @@ static int imx6q_cpufreq_probe(struct platform_device *pdev)
 	if (of_machine_is_compatible("fsl,imx6ul") ||
 	    of_machine_is_compatible("fsl,imx6ull")) {
 		ret = imx6ul_opp_check_speed_grading(cpu_dev);
-		if (ret == -EPROBE_DEFER)
-			return ret;
 		if (ret) {
+			if (ret == -EPROBE_DEFER)
+				return ret;
+
 			dev_err(cpu_dev, "failed to read ocotp: %d\n",
 				ret);
 			return ret;
