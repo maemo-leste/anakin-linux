@@ -772,6 +772,7 @@ static int btrfs_free_stale_devices(const char *path,
 			if (fs_devices->num_devices == 0)
 				break;
 		}
+
 		mutex_unlock(&fs_devices->device_list_mutex);
 
 		if (fs_devices->num_devices == 0) {
@@ -1444,6 +1445,17 @@ static int btrfs_read_disk_super(struct block_device *bdev, u64 bytenr,
 		(*disk_super)->label[BTRFS_LABEL_SIZE - 1] = '\0';
 
 	return 0;
+}
+
+int btrfs_forget_devices(const char *path)
+{
+	int ret;
+
+	mutex_lock(&uuid_mutex);
+	ret = btrfs_free_stale_devices(strlen(path) ? path : NULL, NULL);
+	mutex_unlock(&uuid_mutex);
+
+	return ret;
 }
 
 /*
