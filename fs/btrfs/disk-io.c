@@ -314,6 +314,15 @@ static int csum_tree_block(struct btrfs_fs_info *fs_info,
 			return -EUCLEAN;
 		}
 	} else {
+		if (btrfs_header_level(buf))
+			err = btrfs_check_node(fs_info, buf);
+		else
+			err = btrfs_check_leaf_full(fs_info, buf);
+		if (err < 0) {
+			btrfs_err(fs_info,
+				  "write time tree block corruption detected");
+			return err;
+		}
 		write_extent_buffer(buf, result, 0, csum_size);
 	}
 
@@ -424,12 +433,11 @@ static int verify_level_key(struct btrfs_fs_info *fs_info,
 
 	found_level = btrfs_header_level(eb);
 	if (found_level != level) {
-#ifdef CONFIG_BTRFS_DEBUG
-		WARN_ON(1);
+		WARN(IS_ENABLED(CONFIG_BTRFS_DEBUG),
+		     KERN_ERR "BTRFS: tree level check failed\n");
 		btrfs_err(fs_info,
 "tree level mismatch detected, bytenr=%llu level expected=%u has=%u",
 			  eb->start, level, found_level);
-#endif
 		return -EIO;
 	}
 
@@ -450,9 +458,9 @@ static int verify_level_key(struct btrfs_fs_info *fs_info,
 		btrfs_item_key_to_cpu(eb, &found_key, 0);
 	ret = btrfs_comp_cpu_keys(first_key, &found_key);
 
-#ifdef CONFIG_BTRFS_DEBUG
 	if (ret) {
-		WARN_ON(1);
+		WARN(IS_ENABLED(CONFIG_BTRFS_DEBUG),
+		     KERN_ERR "BTRFS: tree first key check failed\n");
 		btrfs_err(fs_info,
 "tree first key mismatch detected, bytenr=%llu parent_transid=%llu key expected=(%llu,%u,%llu) has=(%llu,%u,%llu)",
 			  eb->start, parent_transid, first_key->objectid,
@@ -460,7 +468,6 @@ static int verify_level_key(struct btrfs_fs_info *fs_info,
 			  found_key.objectid, found_key.type,
 			  found_key.offset);
 	}
-#endif
 	return ret;
 }
 
@@ -661,6 +668,8 @@ static int btree_readpage_end_io_hook(struct btrfs_io_bio *io_bio,
 
 	if (!ret)
 		set_extent_buffer_uptodate(eb);
+	else
+		btrfs_err(fs_info, "read time tree block corrupted detected");
 err:
 	if (reads_done &&
 	    test_and_clear_bit(EXTENT_BUFFER_READAHEAD, &eb->bflags))
@@ -1176,6 +1185,7 @@ static void __setup_root(struct btrfs_root *root, struct btrfs_fs_info *fs_info,
 	INIT_LIST_HEAD(&root->delalloc_root);
 	INIT_LIST_HEAD(&root->ordered_extents);
 	INIT_LIST_HEAD(&root->ordered_root);
+	INIT_LIST_HEAD(&root->reloc_dirty_list);
 	INIT_LIST_HEAD(&root->logged_list[0]);
 	INIT_LIST_HEAD(&root->logged_list[1]);
 	spin_lock_init(&root->inode_lock);
@@ -1219,6 +1229,7 @@ static void __setup_root(struct btrfs_root *root, struct btrfs_fs_info *fs_info,
 	root->anon_dev = 0;
 
 	spin_lock_init(&root->root_item_lock);
+	btrfs_qgroup_init_swapped_blocks(&root->swapped_blocks);
 }
 
 static struct btrfs_root *btrfs_alloc_root(struct btrfs_fs_info *fs_info,

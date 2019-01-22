@@ -1200,6 +1200,24 @@ enum {
 	BTRFS_ROOT_MULTI_LOG_TASKS,
 	BTRFS_ROOT_DIRTY,
 	BTRFS_ROOT_DELETING,
+
+	/*
+	 * Reloc tree is orphan, only kept here for qgroup delayed subtree scan
+	 *
+	 * Set for the subvolume tree owning the reloc tree.
+	 */
+	BTRFS_ROOT_DEAD_RELOC_TREE,
+};
+
+/*
+ * Record swapped tree blocks of a file/subvolume tree for delayed subtree
+ * trace code. For detail check comment in fs/btrfs/qgroup.c.
+ */
+struct btrfs_qgroup_swapped_blocks {
+	spinlock_t lock;
+	struct rb_root blocks[BTRFS_MAX_LEVEL];
+	/* RM_EMPTY_ROOT() of above blocks[] */
+	bool swapped;
 };
 
 /*
@@ -1313,6 +1331,14 @@ struct btrfs_root {
 	u64 nr_ordered_extents;
 
 	/*
+	 * Not empty if this subvolume root has gone through tree block swap
+	 * (relocation)
+	 *
+	 * Will be used by reloc_control::dirty_subv_roots.
+	 */
+	struct list_head reloc_dirty_list;
+
+	/*
 	 * Number of currently running SEND ioctls to prevent
 	 * manipulation with the read-only status via SUBVOL_SETFLAGS
 	 */
@@ -1328,6 +1354,9 @@ struct btrfs_root {
 
 	/* Number of active swapfiles */
 	atomic_t nr_swapfiles;
+
+	/* Record pairs of swapped blocks for qgroup */
+	struct btrfs_qgroup_swapped_blocks swapped_blocks;
 
 #ifdef CONFIG_BTRFS_FS_RUN_SANITY_TESTS
 	u64 alloc_bytenr;
@@ -2776,7 +2805,8 @@ enum btrfs_flush_state {
 	FLUSH_DELALLOC		=	5,
 	FLUSH_DELALLOC_WAIT	=	6,
 	ALLOC_CHUNK		=	7,
-	COMMIT_TRANS		=	8,
+	ALLOC_CHUNK_FORCE	=	8,
+	COMMIT_TRANS		=	9,
 };
 
 int btrfs_alloc_data_chunk_ondemand(struct btrfs_inode *inode, u64 bytes);
