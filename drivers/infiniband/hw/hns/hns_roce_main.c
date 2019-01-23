@@ -343,7 +343,7 @@ static struct ib_ucontext *hns_roce_alloc_ucontext(struct ib_device *ib_dev,
 
 	resp.qp_tab_size = hr_dev->caps.num_qps;
 
-	context = kmalloc(sizeof(*context), GFP_KERNEL);
+	context = kzalloc(sizeof(*context), GFP_KERNEL);
 	if (!context)
 		return ERR_PTR(-ENOMEM);
 
@@ -564,7 +564,7 @@ static int hns_roce_register_device(struct hns_roce_dev *hr_dev)
 	ib_dev->driver_id = RDMA_DRIVER_HNS;
 	ib_set_device_ops(ib_dev, hr_dev->hw->hns_roce_dev_ops);
 	ib_set_device_ops(ib_dev, &hns_roce_dev_ops);
-	ret = ib_register_device(ib_dev, "hns_%d", NULL);
+	ret = ib_register_device(ib_dev, "hns_%d");
 	if (ret) {
 		dev_err(dev, "ib_register_device failed!\n");
 		return ret;

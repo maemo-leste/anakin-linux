@@ -376,8 +376,9 @@ static int c4iw_query_port(struct ib_device *ibdev, u8 port,
 static ssize_t hw_rev_show(struct device *dev,
 			   struct device_attribute *attr, char *buf)
 {
-	struct c4iw_dev *c4iw_dev = container_of(dev, struct c4iw_dev,
-						 ibdev.dev);
+	struct c4iw_dev *c4iw_dev =
+			rdma_device_to_drv_device(dev, struct c4iw_dev, ibdev);
+
 	pr_debug("dev 0x%p\n", dev);
 	return sprintf(buf, "%d\n",
 		       CHELSIO_CHIP_RELEASE(c4iw_dev->rdev.lldi.adapter_type));
@@ -387,8 +388,8 @@ static DEVICE_ATTR_RO(hw_rev);
 static ssize_t hca_type_show(struct device *dev,
 			     struct device_attribute *attr, char *buf)
 {
-	struct c4iw_dev *c4iw_dev = container_of(dev, struct c4iw_dev,
-						 ibdev.dev);
+	struct c4iw_dev *c4iw_dev =
+			rdma_device_to_drv_device(dev, struct c4iw_dev, ibdev);
 	struct ethtool_drvinfo info;
 	struct net_device *lldev = c4iw_dev->rdev.lldi.ports[0];
 
@@ -401,8 +402,9 @@ static DEVICE_ATTR_RO(hca_type);
 static ssize_t board_id_show(struct device *dev, struct device_attribute *attr,
 			     char *buf)
 {
-	struct c4iw_dev *c4iw_dev = container_of(dev, struct c4iw_dev,
-						 ibdev.dev);
+	struct c4iw_dev *c4iw_dev =
+			rdma_device_to_drv_device(dev, struct c4iw_dev, ibdev);
+
 	pr_debug("dev 0x%p\n", dev);
 	return sprintf(buf, "%x.%x\n", c4iw_dev->rdev.lldi.pdev->vendor,
 		       c4iw_dev->rdev.lldi.pdev->device);
@@ -634,7 +636,7 @@ void c4iw_register_device(struct work_struct *work)
 	rdma_set_device_sysfs_group(&dev->ibdev, &c4iw_attr_group);
 	dev->ibdev.driver_id = RDMA_DRIVER_CXGB4;
 	ib_set_device_ops(&dev->ibdev, &c4iw_dev_ops);
-	ret = ib_register_device(&dev->ibdev, "cxgb4_%d", NULL);
+	ret = ib_register_device(&dev->ibdev, "cxgb4_%d");
 	if (ret)
 		goto err_kfree_iwcm;
 	return;
