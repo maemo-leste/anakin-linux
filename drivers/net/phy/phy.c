@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-2.0+
 /* Framework for configuring and reading PHY devices
  * Based on code in sungem_phy.c and gianfar_phy.c
  *
@@ -5,15 +6,7 @@
  *
  * Copyright (c) 2004 Freescale Semiconductor, Inc.
  * Copyright (c) 2006, 2007  Maciej W. Rozycki
- *
- * This program is free software; you can redistribute  it and/or modify it
- * under  the terms of  the GNU General  Public License as published by the
- * Free Software Foundation;  either version 2 of the  License, or (at your
- * option) any later version.
- *
  */
-
-#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 #include <linux/kernel.h>
 #include <linux/string.h>
@@ -36,8 +29,6 @@
 #include <linux/uaccess.h>
 #include <linux/atomic.h>
 
-#include <asm/irq.h>
-
 #define PHY_STATE_STR(_state)			\
 	case PHY_##_state:			\
 		return __stringify(_state);	\
@@ -51,7 +42,6 @@ static const char *phy_state_to_str(enum phy_state st)
 	PHY_STATE_STR(RUNNING)
 	PHY_STATE_STR(NOLINK)
 	PHY_STATE_STR(FORCING)
-	PHY_STATE_STR(CHANGELINK)
 	PHY_STATE_STR(HALTED)
 	PHY_STATE_STR(RESUMING)
 	}
@@ -809,8 +799,7 @@ int phy_start_interrupts(struct phy_device *phydev)
 	if (request_threaded_irq(phydev->irq, NULL, phy_interrupt,
 				 IRQF_ONESHOT | IRQF_SHARED,
 				 phydev_name(phydev), phydev) < 0) {
-		pr_warn("%s: Can't get IRQ %d (PHY)\n",
-			phydev->mdio.bus->name, phydev->irq);
+		phydev_warn(phydev, "Can't get IRQ %d\n", phydev->irq);
 		phydev->irq = PHY_POLL;
 		return 0;
 	}
@@ -818,23 +807,6 @@ int phy_start_interrupts(struct phy_device *phydev)
 	return phy_enable_interrupts(phydev);
 }
 EXPORT_SYMBOL(phy_start_interrupts);
-
-/**
- * phy_stop_interrupts - disable interrupts from a PHY device
- * @phydev: target phy_device struct
- */
-int phy_stop_interrupts(struct phy_device *phydev)
-{
-	int err = phy_disable_interrupts(phydev);
-
-	if (err)
-		phy_error(phydev);
-
-	free_irq(phydev->irq, phydev);
-
-	return err;
-}
-EXPORT_SYMBOL(phy_stop_interrupts);
 
 /**
  * phy_stop - Bring down the PHY link, and stop checking the status
@@ -859,6 +831,7 @@ void phy_stop(struct phy_device *phydev)
 	mutex_unlock(&phydev->lock);
 
 	phy_state_machine(&phydev->state_queue.work);
+	phy_stop_machine(phydev);
 
 	/* Cannot call flush_scheduled_work() here as desired because
 	 * of rtnl_lock(), but PHY_HALTED shall guarantee irq handler
@@ -939,7 +912,6 @@ void phy_state_machine(struct work_struct *work)
 		break;
 	case PHY_NOLINK:
 	case PHY_RUNNING:
-	case PHY_CHANGELINK:
 	case PHY_RESUMING:
 		err = phy_check_link_status(phydev);
 		break;
