@@ -391,3 +391,10 @@ including:
    :maxdepth: 2
 
    path-lookup.rst
+
+binderfs
+========
+
+.. toctree::
+
+   binderfs.rst
