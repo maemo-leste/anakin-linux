@@ -465,7 +465,7 @@ static const struct irq_domain_ops davinci_gpio_irq_ops = {
 
 static struct irq_chip *davinci_gpio_get_irq_chip(unsigned int irq)
 {
-	static struct irq_chip_type gpio_unbanked;
+	struct irq_chip_type gpio_unbanked;
 
 	gpio_unbanked = *irq_data_get_chip_type(irq_get_irq_data(irq));
 
@@ -474,7 +474,7 @@ static struct irq_chip *davinci_gpio_get_irq_chip(unsigned int irq)
 
 static struct irq_chip *keystone_gpio_get_irq_chip(unsigned int irq)
 {
-	static struct irq_chip gpio_unbanked;
+	struct irq_chip gpio_unbanked;
 
 	gpio_unbanked = *irq_get_chip(irq);
 	return &gpio_unbanked;
