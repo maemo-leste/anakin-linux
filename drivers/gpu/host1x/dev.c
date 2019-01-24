@@ -127,7 +127,7 @@ static const struct host1x_info host1x06_info = {
 	.nb_bases = 16,
 	.init = host1x06_init,
 	.sync_offset = 0x0,
-	.dma_mask = DMA_BIT_MASK(34),
+	.dma_mask = DMA_BIT_MASK(40),
 	.has_hypervisor = true,
 };
 

@@ -181,13 +181,6 @@ static int vic_init(struct host1x_client *client)
 		vic->domain = tegra->domain;
 	}
 
-	if (!vic->falcon.data) {
-		vic->falcon.data = tegra;
-		err = falcon_load_firmware(&vic->falcon);
-		if (err < 0)
-			goto detach;
-	}
-
 	vic->channel = host1x_channel_request(client->dev);
 	if (!vic->channel) {
 		err = -ENOMEM;
@@ -255,6 +248,16 @@ static int vic_open_channel(struct tegra_drm_client *client,
 	err = pm_runtime_get_sync(vic->dev);
 	if (err < 0)
 		return err;
+
+	if (!vic->falcon.data) {
+		vic->falcon.data = client->drm;
+
+		err = falcon_load_firmware(&vic->falcon);
+		if (err < 0) {
+			pm_runtime_put(vic->dev);
+			return err;
+		}
+	}
 
 	err = vic_boot(vic);
 	if (err < 0) {
