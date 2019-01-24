@@ -1368,7 +1368,6 @@ static int chcr_aes_decrypt(struct ablkcipher_request *req)
 static int chcr_device_init(struct chcr_context *ctx)
 {
 	struct uld_ctx *u_ctx = NULL;
-	struct adapter *adap;
 	unsigned int id;
 	int txq_perchan, txq_idx, ntxq;
 	int err = 0, rxq_perchan, rxq_idx;
@@ -1382,7 +1381,6 @@ static int chcr_device_init(struct chcr_context *ctx)
 			goto out;
 		}
 		ctx->dev = &u_ctx->dev;
-		adap = padap(ctx->dev);
 		ntxq = u_ctx->lldi.ntxq;
 		rxq_perchan = u_ctx->lldi.nrxq / u_ctx->lldi.nchan;
 		txq_perchan = ntxq / u_ctx->lldi.nchan;
@@ -2762,7 +2760,7 @@ static int set_msg_len(u8 *block, unsigned int msglen, int csize)
 	return 0;
 }
 
-static void generate_b0(struct aead_request *req, u8 *ivptr,
+static int generate_b0(struct aead_request *req, u8 *ivptr,
 			unsigned short op_type)
 {
 	unsigned int l, lp, m;
@@ -2787,6 +2785,8 @@ static void generate_b0(struct aead_request *req, u8 *ivptr,
 	rc = set_msg_len(b0 + 16 - l,
 			 (op_type == CHCR_DECRYPT_OP) ?
 			 req->cryptlen - m : req->cryptlen, l);
+
+	return rc;
 }
 
 static inline int crypto_ccm_check_iv(const u8 *iv)
@@ -2821,7 +2821,7 @@ static int ccm_format_packet(struct aead_request *req,
 		*((unsigned short *)(reqctx->scratch_pad + 16)) =
 				htons(assoclen);
 
-	generate_b0(req, ivptr, op_type);
+	rc = generate_b0(req, ivptr, op_type);
 	/* zero the ctr value */
 	memset(ivptr + 15 - ivptr[0], 0, ivptr[0] + 1);
 	return rc;
