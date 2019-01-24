@@ -2235,8 +2235,8 @@ static void unfreeze_partials(struct kmem_cache *s,
 }
 
 /*
- * Put a page that was just frozen (in __slab_free) into a partial page
- * slot if available.
+ * Put a page that was just frozen (in __slab_free|get_partial_node) into a
+ * partial page slot if available.
  *
  * If we did not find a slot then simply move all the partials to the
  * per node partial list.
@@ -2463,8 +2463,7 @@ static inline void *new_slab_objects(struct kmem_cache *s, gfp_t flags,
 		stat(s, ALLOC_SLAB);
 		c->page = page;
 		*pc = c;
-	} else
-		freelist = NULL;
+	}
 
 	return freelist;
 }
