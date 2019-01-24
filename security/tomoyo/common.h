@@ -29,6 +29,7 @@
 #include <linux/in.h>
 #include <linux/in6.h>
 #include <linux/un.h>
+#include <linux/lsm_hooks.h>
 #include <net/sock.h>
 #include <net/af_unix.h>
 #include <net/ip.h>
@@ -685,7 +686,7 @@ struct tomoyo_domain_info {
 	u8 group;          /* Group number to use.   */
 	bool is_deleted;   /* Delete flag.           */
 	bool flags[TOMOYO_MAX_DOMAIN_INFO_FLAGS];
-	atomic_t users; /* Number of referring credentials. */
+	atomic_t users; /* Number of referring tasks. */
 };
 
 /*
@@ -912,6 +913,12 @@ struct tomoyo_policy_namespace {
 	const char *name;
 };
 
+/* Structure for "struct task_struct"->security. */
+struct tomoyo_task {
+	struct tomoyo_domain_info *domain_info;
+	struct tomoyo_domain_info *old_domain_info;
+};
+
 /********** Function prototypes. **********/
 
 bool tomoyo_address_matches_group(const bool is_ipv6, const __be32 *address,
@@ -1020,6 +1027,7 @@ ssize_t tomoyo_write_control(struct tomoyo_io_buffer *head,
 struct tomoyo_condition *tomoyo_get_condition(struct tomoyo_acl_param *param);
 struct tomoyo_domain_info *tomoyo_assign_domain(const char *domainname,
 						const bool transit);
+struct tomoyo_domain_info *tomoyo_domain(void);
 struct tomoyo_domain_info *tomoyo_find_domain(const char *domainname);
 struct tomoyo_group *tomoyo_get_group(struct tomoyo_acl_param *param,
 				      const u8 idx);
@@ -1062,6 +1070,7 @@ void tomoyo_write_log2(struct tomoyo_request_info *r, int len, const char *fmt,
 /********** External variable definitions. **********/
 
 extern bool tomoyo_policy_loaded;
+extern int tomoyo_enabled;
 extern const char * const tomoyo_condition_keyword
 [TOMOYO_MAX_CONDITION_KEYWORD];
 extern const char * const tomoyo_dif[TOMOYO_MAX_DOMAIN_INFO_FLAGS];
@@ -1085,6 +1094,7 @@ extern struct tomoyo_domain_info tomoyo_kernel_domain;
 extern struct tomoyo_policy_namespace tomoyo_kernel_namespace;
 extern unsigned int tomoyo_memory_quota[TOMOYO_MAX_MEMORY_STAT];
 extern unsigned int tomoyo_memory_used[TOMOYO_MAX_MEMORY_STAT];
+extern struct lsm_blob_sizes tomoyo_blob_sizes;
 
 /********** Inlined functions. **********/
 
@@ -1197,26 +1207,15 @@ static inline void tomoyo_put_group(struct tomoyo_group *group)
 }
 
 /**
- * tomoyo_domain - Get "struct tomoyo_domain_info" for current thread.
+ * tomoyo_task - Get "struct tomoyo_task" for specified thread.
  *
- * Returns pointer to "struct tomoyo_domain_info" for current thread.
+ * @task - Pointer to "struct task_struct".
+ *
+ * Returns pointer to "struct tomoyo_task" for specified thread.
  */
-static inline struct tomoyo_domain_info *tomoyo_domain(void)
+static inline struct tomoyo_task *tomoyo_task(struct task_struct *task)
 {
-	return current_cred()->security;
-}
-
-/**
- * tomoyo_real_domain - Get "struct tomoyo_domain_info" for specified thread.
- *
- * @task: Pointer to "struct task_struct".
- *
- * Returns pointer to "struct tomoyo_security" for specified thread.
- */
-static inline struct tomoyo_domain_info *tomoyo_real_domain(struct task_struct
-							    *task)
-{
-	return task_cred_xxx(task, security);
+	return task->security + tomoyo_blob_sizes.lbs_task;
 }
 
 /**

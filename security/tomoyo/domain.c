@@ -842,8 +842,13 @@ force_jump_domain:
 	if (!domain)
 		domain = old_domain;
 	/* Update reference count on "struct tomoyo_domain_info". */
-	atomic_inc(&domain->users);
-	bprm->cred->security = domain;
+	{
+		struct tomoyo_task *s = tomoyo_task(current);
+
+		s->old_domain_info = s->domain_info;
+		s->domain_info = domain;
+		atomic_inc(&domain->users);
+	}
 	kfree(exename.name);
 	if (!retval) {
 		ee->r.domain = domain;

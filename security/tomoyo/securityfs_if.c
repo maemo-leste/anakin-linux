@@ -67,18 +67,14 @@ static ssize_t tomoyo_write_self(struct file *file, const char __user *buf,
 			if (!new_domain) {
 				error = -ENOENT;
 			} else {
-				struct cred *cred = prepare_creds();
-				if (!cred) {
-					error = -ENOMEM;
-				} else {
-					struct tomoyo_domain_info *old_domain =
-						cred->security;
-					cred->security = new_domain;
-					atomic_inc(&new_domain->users);
-					atomic_dec(&old_domain->users);
-					commit_creds(cred);
-					error = 0;
-				}
+				struct tomoyo_task *s = tomoyo_task(current);
+				struct tomoyo_domain_info *old_domain =
+					s->domain_info;
+
+				s->domain_info = new_domain;
+				atomic_inc(&new_domain->users);
+				atomic_dec(&old_domain->users);
+				error = 0;
 			}
 		}
 		tomoyo_read_unlock(idx);
@@ -234,10 +230,14 @@ static void __init tomoyo_create_entry(const char *name, const umode_t mode,
  */
 static int __init tomoyo_initerface_init(void)
 {
+	struct tomoyo_domain_info *domain;
 	struct dentry *tomoyo_dir;
 
+	if (!tomoyo_enabled)
+		return 0;
+	domain = tomoyo_domain();
 	/* Don't create securityfs entries unless registered. */
-	if (current_cred()->security != &tomoyo_kernel_domain)
+	if (domain != &tomoyo_kernel_domain)
 		return 0;
 
 	tomoyo_dir = securityfs_create_dir("tomoyo", NULL);
