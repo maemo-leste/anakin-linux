@@ -658,6 +658,7 @@ extern "C" {
 #define AFBC_FORMAT_MOD_SC      (1ULL <<  9)
 
 /*
+<<<<<<< HEAD
  * AFBC double-buffer
  *
  * Indicates that the buffer is allocated in a layout safe for front-buffer
@@ -685,6 +686,14 @@ extern "C" {
  * both in row-major order.
  */
 #define DRM_FORMAT_MOD_ALLWINNER_TILED fourcc_mod_code(ALLWINNER, 1)
+/*
+ * ARM tiled format
+ *
+ * This is used by ARM Mali Utgard/Midgard GPU. It divides buffer into
+ * 16x16 pixel blocks. Blocks are stored linearly in order, but pixels
+ * in the block are reordered.
+ */
+#define DRM_FORMAT_MOD_ARM_TILED fourcc_mod_code(ARM, 1)
 
 #if defined(__cplusplus)
 }
