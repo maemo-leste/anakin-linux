@@ -388,7 +388,7 @@ static int lima_pdev_probe(struct platform_device *pdev)
 err_out1:
 	lima_device_fini(ldev);
 err_out0:
-	drm_dev_unref(ddev);
+	drm_dev_put(ddev);
 	return err;
 }
 
@@ -399,7 +399,7 @@ static int lima_pdev_remove(struct platform_device *pdev)
 
 	drm_dev_unregister(ddev);
 	lima_device_fini(ldev);
-	drm_dev_unref(ddev);
+	drm_dev_put(ddev);
 	return 0;
 }
 

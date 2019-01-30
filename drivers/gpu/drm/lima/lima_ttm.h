@@ -7,8 +7,6 @@
 #include <drm/ttm/ttm_bo_driver.h>
 
 struct lima_mman {
-	struct ttm_bo_global_ref bo_global_ref;
-	struct drm_global_reference mem_global_ref;
 	struct ttm_bo_device bdev;
 	bool mem_global_referenced;
 };

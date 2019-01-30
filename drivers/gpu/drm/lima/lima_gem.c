@@ -73,11 +73,11 @@ void lima_gem_object_close(struct drm_gem_object *obj, struct drm_file *file)
 	int r;
 
 	tv_bo.bo = &bo->tbo;
-	tv_bo.shared = true;
+	tv_bo.num_shared = 1;
 	list_add(&tv_bo.head, &list);
 
 	tv_pd.bo = &vm->pd->tbo;
-	tv_pd.shared = true;
+	tv_pd.num_shared = 1;
 	list_add(&tv_pd.head, &list);
 
 	r = ttm_eu_reserve_buffers(&ticket, &list, false, NULL);
@@ -157,11 +157,11 @@ int lima_gem_va_map(struct drm_file *file, u32 handle, u32 flags, u32 va)
 	}
 
 	tv_bo.bo = &bo->tbo;
-	tv_bo.shared = true;
+	tv_bo.num_shared = 1;
 	list_add(&tv_bo.head, &list);
 
 	tv_pd.bo = &vm->pd->tbo;
-	tv_pd.shared = true;
+	tv_pd.num_shared = 1;
 	list_add(&tv_pd.head, &list);
 
 	err = ttm_eu_reserve_buffers(&ticket, &list, false, NULL);
@@ -198,11 +198,11 @@ int lima_gem_va_unmap(struct drm_file *file, u32 handle, u32 va)
 	bo = to_lima_bo(obj);
 
 	tv_bo.bo = &bo->tbo;
-	tv_bo.shared = true;
+	tv_bo.num_shared = 1;
 	list_add(&tv_bo.head, &list);
 
 	tv_pd.bo = &vm->pd->tbo;
-	tv_pd.shared = true;
+	tv_pd.num_shared = 1;
 	list_add(&tv_pd.head, &list);
 
 	err = ttm_eu_reserve_buffers(&ticket, &list, false, NULL);
@@ -223,7 +223,7 @@ static int lima_gem_sync_bo(struct lima_sched_task *task, struct lima_bo *bo,
 	int err = 0;
 
 	if (!write) {
-		err = reservation_object_reserve_shared(bo->tbo.resv);
+		err = reservation_object_reserve_shared(bo->tbo.resv, 1);
 		if (err)
 			return err;
 	}
@@ -349,12 +349,15 @@ int lima_gem_submit(struct drm_file *file, struct lima_submit *submit)
 		}
 
 		vb->bo = &to_lima_bo(obj)->tbo;
-		vb->shared = !(bo->flags & LIMA_SUBMIT_BO_WRITE);
+		if (!(bo->flags & LIMA_SUBMIT_BO_WRITE))
+			vb->num_shared = 1;
+		else
+			vb->num_shared = 0;
 		list_add_tail(&vb->head, &submit->validated);
 	}
 
 	submit->vm_pd_vb.bo = &vm->pd->tbo;
-	submit->vm_pd_vb.shared = true;
+	submit->vm_pd_vb.num_shared = 1;
 	list_add(&submit->vm_pd_vb.head, &submit->validated);
 
 	err = ttm_eu_reserve_buffers(&submit->ticket, &submit->validated,
@@ -375,7 +378,7 @@ int lima_gem_submit(struct drm_file *file, struct lima_submit *submit)
 		struct ttm_validate_buffer *vb = submit->vbs + i;
 		struct lima_bo *bo = ttm_to_lima_bo(vb->bo);
 		err = lima_gem_sync_bo(
-			submit->task, bo, !vb->shared,
+			submit->task, bo, vb->num_shared == 0,
 			submit->flags & LIMA_SUBMIT_FLAG_EXPLICIT_FENCE);
 		if (err)
 			goto out2;

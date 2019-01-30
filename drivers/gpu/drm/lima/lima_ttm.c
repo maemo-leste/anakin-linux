@@ -9,62 +9,6 @@
 #include "lima_object.h"
 
 
-static int lima_ttm_mem_global_init(struct drm_global_reference *ref)
-{
-	return ttm_mem_global_init(ref->object);
-}
-
-static void lima_ttm_mem_global_release(struct drm_global_reference *ref)
-{
-	ttm_mem_global_release(ref->object);
-}
-
-static int lima_ttm_global_init(struct lima_device *dev)
-{
-	struct drm_global_reference *global_ref;
-	int err;
-
-	dev->mman.mem_global_referenced = false;
-	global_ref = &dev->mman.mem_global_ref;
-	global_ref->global_type = DRM_GLOBAL_TTM_MEM;
-	global_ref->size = sizeof(struct ttm_mem_global);
-	global_ref->init = &lima_ttm_mem_global_init;
-	global_ref->release = &lima_ttm_mem_global_release;
-
-	err = drm_global_item_ref(global_ref);
-	if (err != 0) {
-		dev_err(dev->dev, "Failed setting up TTM memory accounting "
-			"subsystem.\n");
-		return err;
-	}
-
-	dev->mman.bo_global_ref.mem_glob =
-		dev->mman.mem_global_ref.object;
-	global_ref = &dev->mman.bo_global_ref.ref;
-	global_ref->global_type = DRM_GLOBAL_TTM_BO;
-	global_ref->size = sizeof(struct ttm_bo_global);
-	global_ref->init = &ttm_bo_global_init;
-	global_ref->release = &ttm_bo_global_release;
-	err = drm_global_item_ref(global_ref);
-	if (err != 0) {
-		dev_err(dev->dev, "Failed setting up TTM BO subsystem.\n");
-		drm_global_item_unref(&dev->mman.mem_global_ref);
-		return err;
-	}
-
-	dev->mman.mem_global_referenced = true;
-	return 0;
-}
-
-static void lima_ttm_global_fini(struct lima_device *dev)
-{
-	if (dev->mman.mem_global_referenced) {
-		drm_global_item_unref(&dev->mman.bo_global_ref.ref);
-		drm_global_item_unref(&dev->mman.mem_global_ref);
-		dev->mman.mem_global_referenced = false;
-	}
-}
-
 struct lima_tt_mgr {
 	spinlock_t lock;
 	unsigned long available;
@@ -335,12 +279,7 @@ int lima_ttm_init(struct lima_device *dev)
 	int err;
 	u64 gtt_size;
 
-	err = lima_ttm_global_init(dev);
-	if (err)
-		return err;
-
 	err = ttm_bo_device_init(&dev->mman.bdev,
-				 dev->mman.bo_global_ref.ref.object,
 				 &lima_bo_driver,
 				 dev->ddev->anon_inode->i_mapping,
 				 DRM_FILE_PAGE_OFFSET,
@@ -348,7 +287,7 @@ int lima_ttm_init(struct lima_device *dev)
 	if (err) {
 		dev_err(dev->dev, "failed initializing buffer object "
 			"driver(%d).\n", err);
-		goto err_out0;
+		return err;
 	}
 
 	if (lima_max_mem < 0) {
@@ -364,20 +303,17 @@ int lima_ttm_init(struct lima_device *dev)
 	err = ttm_bo_init_mm(&dev->mman.bdev, TTM_PL_TT, gtt_size >> PAGE_SHIFT);
 	if (err) {
 		dev_err(dev->dev, "Failed initializing GTT heap.\n");
-		goto err_out1;
+		goto err_out0;
 	}
 	return 0;
 
-err_out1:
-	ttm_bo_device_release(&dev->mman.bdev);
 err_out0:
-	lima_ttm_global_fini(dev);
+	ttm_bo_device_release(&dev->mman.bdev);
 	return err;
 }
 
 void lima_ttm_fini(struct lima_device *dev)
 {
 	ttm_bo_device_release(&dev->mman.bdev);
-	lima_ttm_global_fini(dev);
 	dev_info(dev->dev, "ttm finalized\n");
 }
