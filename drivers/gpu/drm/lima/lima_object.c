@@ -10,9 +10,7 @@
 void lima_bo_destroy(struct lima_bo *bo)
 {
         if (bo->sgt) {
-		if (bo->pages)
-			kfree(bo->pages);
-
+		kfree(bo->pages);
 		drm_prime_gem_destroy(&bo->gem, bo->sgt);
 	}
 	else {
@@ -31,9 +29,7 @@ void lima_bo_destroy(struct lima_bo *bo)
 			drm_gem_put_pages(&bo->gem, bo->pages, true, true);
 	}
 
-	if (bo->pages_dma_addr)
-		kfree(bo->pages_dma_addr);
-
+	kfree(bo->pages_dma_addr);
 	drm_gem_object_release(&bo->gem);
 	kfree(bo);
 }

@@ -140,7 +140,7 @@ static int lima_regulator_init(struct lima_device *dev)
 		dev->regulator = NULL;
 		if (ret == -ENODEV)
 			return 0;
-		dev_err(dev->dev, "failed to get regulator: %ld\n", PTR_ERR(dev->regulator));
+		dev_err(dev->dev, "failed to get regulator: %d\n", ret);
 		return ret;
 	}
 
